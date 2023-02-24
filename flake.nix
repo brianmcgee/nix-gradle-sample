@@ -28,7 +28,6 @@
 
     gitignore = {
       url = "github:hercules-ci/gitignore.nix";
-      # Use the same nixpkgs
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -76,9 +75,11 @@
       }: let
         inherit (pkgs) stdenv;
 
+        # pick our jdk and gradle versions
         jdk = pkgs.jdk17;
         gradle = pkgs.gradle;
 
+        # bring in gradle2nix
         inherit (inputs.gradle2nix.packages.${system}) gradle2nix;
       in {
         # configure treefmt
@@ -87,6 +88,7 @@
           package = pkgs.treefmt;
 
           programs = {
+            # only nix code for now
             alejandra.enable = true;
           };
         };
@@ -96,6 +98,7 @@
 
         # define a devshell
         devShells.default = inputs'.devshell.legacyPackages.mkShell {
+          # setup some environment variables
           env = with lib;
             mkMerge [
               [
@@ -113,6 +116,7 @@
               ])
             ];
 
+          # add package dependencies
           packages = with lib;
             mkMerge [
               [
@@ -123,19 +127,24 @@
             ];
         };
 
+        # define flake output packages
         packages = let
+          # useful for filtering src trees based on gitignore
           inherit (gitignore.lib) gitignoreSource;
 
+          # common properties across the derivations
           version = "1.0.0";
           src = gitignoreSource ./.;
         in {
+          # This package is an example of using a fixed-output derivation for the dependencies which can
+          # then be used to construct an offline maven repository for the main package build.
           fod = let
             inherit (gitignore.lib) gitignoreSource;
 
             src = gitignoreSource ./.;
             version = "1.0.0";
 
-            # fake build to pre-download deps into fixed-output derivation
+            # fake build to pre-download dependencies into a fixed-output derivation
             deps = stdenv.mkDerivation {
               pname = "vanilla-deps";
               inherit version src;
@@ -159,8 +168,9 @@
               outputHash = "sha256-Om4BcXK76QrExnKcDzw574l+h75C8yK/EbccpbcvLsQ=";
             };
           in
+            # the main derivation for this package
             stdenv.mkDerivation rec {
-              pname = "vanilla";
+              pname = "fod";
               inherit version src;
 
               nativeBuildInputs = [gradle pkgs.makeWrapper];
@@ -206,6 +216,8 @@
               meta.mainProgram = "app";
             };
 
+          # This package is an example of using gradle2nix to manage the fixed-output derivation mechanics that you
+          # can see being done above.
           gradle2nix = let
             buildGradle = pkgs.callPackage ./gradle-env.nix {};
           in
@@ -229,6 +241,7 @@
               meta.mainProgram = "app";
             };
 
+          # This package is an example of an escape hatch should the approach above fail.
           yolo = stdenv.mkDerivation {
             pname = "yolo";
             inherit version src;
