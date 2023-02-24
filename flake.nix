@@ -59,8 +59,6 @@
       systems = [
         "x86_64-linux"
         "aarch64-linux"
-        "x86_64-darwin"
-        "aarch64-darwin"
       ];
 
       imports = [
@@ -112,9 +110,6 @@
                   name = "JAVA_HOME";
                   eval = "$DEVSHELL_DIR/lib/openjdk";
                 }
-              ])
-              (mkIf stdenv.isDarwin [
-                # tbd
               ])
             ];
 
